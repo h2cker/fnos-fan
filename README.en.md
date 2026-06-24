@@ -37,7 +37,7 @@ The installer adds a `fnos-fan` command:
 fnos-fan status      show status
 fnos-fan logs        follow logs
 fnos-fan restart     restart
-fnos-fan stop        stop (safely ramps fans to 100%; do NOT use docker kill)
+fnos-fan stop        stop (hands fans back to firmware auto; do NOT use docker kill)
 fnos-fan update      update to the latest version
 fnos-fan uninstall   uninstall
 ```
@@ -57,15 +57,21 @@ fnos-fan uninstall   uninstall
   curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo ALLOWED_HOSTS=nas.example.com bash
   ```
 - Change `WEB_PORT` on conflict. The container uses **host networking** (binds the NAS port directly); if fnOS runs in a **NAT (non-bridged) VM**, the NAS IP may not be on the LAN directly — set up port forwarding or a bridged adapter in your hypervisor.
-- Always stop with `fnos-fan stop` / `docker stop` (triggers the fans-to-100% failsafe), never `docker kill`.
+- Always stop with `fnos-fan stop` / `docker stop` (hands fans back to the hardware's automatic control; 100% on drivers without an auto mode), never `docker kill` (leaves fans pinned at the last manual duty).
 
 ## Failsafe
 
-On shutdown, control-loop panic, or when **all temperature sensors become unreadable**, fans are forced to 100%; if the process crashes the container restarts and re-takes control — fans are never left stuck at a low speed.
+On a control-loop panic or when **all temperature sensors become unreadable**, fans are forced to 100%; on a clean stop/uninstall fans are handed back to the hardware's automatic control (100% on drivers without an auto mode). If the process crashes the container restarts and re-takes control — fans are never left stuck at a low speed.
 
 ## After a kernel upgrade
 
 When fnOS upgrades the kernel: (1) reboot, (2) `sudo apt install linux-headers-$(uname -r)`, (3) `fnos-fan restart`. The container recompiles the module for the new kernel automatically.
+
+## Non-QNAP boards (generic ITE Super-I/O)
+
+You don't need a QNAP. Many x86 mini-NAS boxes (e.g. the Beelink ME mini, IT8613E) drive their fan through an ITE Super-I/O chip. On a **non-QNAP** board that otherwise exposes no pwm, the container automatically builds and loads the bundled `it87` (frankcrawford fork — it supports newer ITE chips the in-tree it87 doesn't), exposing the fan as a standard hwmon pwm that fanctld then drives — fully automatic, same as the QNAP path.
+
+Same prerequisites apply: kernel headers installed, module signing not enforced. Boards whose chip isn't supported by it87 can't be controlled (`fnos-fan logs` will say so).
 
 ## Known limitations
 

@@ -21,9 +21,12 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
         build-essential kmod libelf-dev bc curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Vendored kernel-module source (run scripts/vendor-kmod.sh before building).
-# Compiled at runtime against the host's kernel headers (mounted read-only).
+# Vendored kernel-module source (run scripts/vendor-kmod.sh + vendor-it87.sh
+# before building). Compiled at runtime against the host's kernel headers
+# (mounted read-only). qnap8528 = QNAP ITE8528 EC; it87 = generic ITE Super-I/O
+# (frankcrawford fork) for non-QNAP x86 boxes.
 COPY kmod/qnap8528 /opt/qnap8528
+COPY kmod/it87 /opt/it87
 COPY scripts/ /opt/fnos-fan/scripts/
 COPY --from=gobuild /out/fanctld /usr/local/bin/fanctld
 RUN chmod +x /opt/fnos-fan/scripts/*.sh

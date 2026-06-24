@@ -21,6 +21,9 @@ KVER="$(kver)"
 CACHE="/data/modules/$KVER"
 KO="$CACHE/qnap8528.ko"
 BUILD_ID_FILE="$CACHE/.build-id"
+IT87_SRC="/opt/it87"                        # vendored frankcrawford/it87 fork
+IT87_KO="$CACHE/it87.ko"
+IT87_BUILD_ID_FILE="$CACHE/.it87-build-id"
 
 log() { echo "[entrypoint] $*"; }
 fatal_if_qnap() { if is_qnap; then log "FATAL: $*"; sleep 10; exit 1; else log "WARN: $*"; fi; }
@@ -30,7 +33,14 @@ fatal_if_qnap() { if is_qnap; then log "FATAL: $*"; sleep 10; exit 1; else log "
 # force a recompile instead of loading a stale, incompatible .ko.
 build_id() {
   local d; d="$(headers_dir)"
-  cat "$d/.config" "$d/include/generated/utsrelease.h" 2>/dev/null | sha256sum | cut -d' ' -f1
+  if [ -f "$d/.config" ]; then
+    cat "$d/.config" "$d/include/generated/utsrelease.h" 2>/dev/null | sha256sum | cut -d' ' -f1
+  else
+    # Some kernels (e.g. fnOS) ship headers without .config — hashing only
+    # utsrelease.h would miss an ABI change on a same-version rebuild. Fold in
+    # the headers-tree mtime so a re-installed/changed header set forces a rebuild.
+    { cat "$d/include/generated/utsrelease.h" 2>/dev/null; stat -c '%Y' "$d" 2>/dev/null; } | sha256sum | cut -d' ' -f1
+  fi
 }
 
 arch_check() {
@@ -106,6 +116,53 @@ load_generic_modules() {
   done
 }
 
+# Fallback for non-QNAP x86 boards: if nothing exposes a pwm yet, build+load the
+# vendored frankcrawford/it87 fork. It supports many ITE Super-I/O chips the
+# in-tree it87 lacks (e.g. IT8613E on the Beelink ME mini), letting generic
+# mini-NAS boxes expose pwm/fan via hwmon. Best-effort: never fatal — if it does
+# not bind, the web UI still runs for temperature monitoring.
+maybe_load_it87() {
+  is_qnap && return 0                          # QNAP boards use qnap8528
+  [ -f "$IT87_SRC/Makefile" ] || return 0      # it87 not vendored into this image
+  if any_pwm; then log "pwm control already present — skipping it87"; return 0; fi
+  if module_loaded it87; then log "it87 already loaded"; return 0; fi
+  [ "$(kernel_arch)" = x86_64 ] || { log "it87 needs x86_64 — skipping (host is $(kernel_arch))"; return 0; }
+  arch_check || return 0                        # image userspace vs kernel match
+  if sig_enforced || lockdown_active; then
+    log "WARN: kernel enforces module signing / lockdown — cannot load out-of-tree it87"
+    return 0
+  fi
+  if ! valid_headers; then
+    log "WARN: no valid kernel headers for $KVER — cannot build it87 (on the HOST: apt install linux-headers-$KVER)"
+    return 0
+  fi
+
+  # (Re)build if no cached .ko or the kernel build fingerprint changed.
+  if [ ! -f "$IT87_KO" ] || [ "$(cat "$IT87_BUILD_ID_FILE" 2>/dev/null)" != "$(build_id)" ]; then
+    log "building it87 (frankcrawford fork) for $KVER ..."
+    mkdir -p "$CACHE"
+    if make -C "$IT87_SRC" TARGET="$KVER" >/tmp/it87-build.log 2>&1; then
+      cp "$IT87_SRC/it87.ko" "$IT87_KO"
+      build_id > "$IT87_BUILD_ID_FILE"
+      make -C "$IT87_SRC" TARGET="$KVER" clean >/dev/null 2>&1 || true
+      log "it87 build OK -> $IT87_KO"
+    else
+      log "it87 build FAILED:"; sed 's/^/    /' /tmp/it87-build.log
+      return 0
+    fi
+  fi
+
+  modprobe hwmon_vid wmi 2>/dev/null || true   # it87 deps; insmod won't auto-resolve them
+  log "loading $IT87_KO"
+  if insmod "$IT87_KO" 2>/tmp/it87-insmod.log; then
+    if any_pwm; then log "it87 loaded — pwm fan control now available"
+    else log "it87 loaded but found no supported chip on this board (no pwm appeared)"; fi
+  else
+    log "it87 load FAILED:"; sed 's/^/    /' /tmp/it87-insmod.log
+  fi
+  return 0
+}
+
 if fancontrol_running; then
   log "WARN: a 'fancontrol' process is running on the host and will fight us over PWM. Stop it: systemctl disable --now fancontrol"
 fi
@@ -114,6 +171,7 @@ if ! load_qnap_module; then
   fatal_if_qnap "qnap8528 not loaded — refusing to run with no fan control on a QNAP board"
 fi
 load_generic_modules
+maybe_load_it87
 
 log "starting fanctld"
 exec /usr/local/bin/fanctld

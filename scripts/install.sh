@@ -58,6 +58,11 @@ uninstall() {
 command -v docker >/dev/null || die "未安装 Docker。请先安装 Docker。"
 docker info >/dev/null 2>&1 || die "Docker 未运行。"
 
+# 确保 Docker 开机自启,否则 NAS 重启后容器(及风扇控制)不会自动回来
+if command -v systemctl >/dev/null 2>&1; then
+  systemctl enable docker >/dev/null 2>&1 && ok "已启用 Docker 开机自启" || warn "未能启用 Docker 开机自启(请手动:sudo systemctl enable docker)"
+fi
+
 ARCH="$(uname -m)"
 [ "$ARCH" = "x86_64" ] || warn "当前架构 $ARCH 非 x86_64;qnap8528 仅支持 x86,只会启用通用 hwmon 路径。"
 

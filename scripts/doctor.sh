@@ -31,8 +31,8 @@ shopt -s nullglob
 found=0
 for d in /sys/class/hwmon/hwmon*; do
   name="$(cat "$d/name" 2>/dev/null || echo '?')"
-  fans=("$d"/fan*_input); temps=("$d"/temp*_input)
-  printf '  %-28s name=%-12s fans=%d temps=%d\n' "$d" "$name" "${#fans[@]}" "${#temps[@]}"
+  fans=("$d"/fan*_input); temps=("$d"/temp*_input); pwms=("$d"/pwm[0-9])
+  printf '  %-28s name=%-12s fans=%d temps=%d pwms=%d\n' "$d" "$name" "${#fans[@]}" "${#temps[@]}" "${#pwms[@]}"
   found=1
 done
 [ "$found" = 0 ] && echo "  (none — fan driver not loaded yet)"
@@ -43,6 +43,7 @@ echo "== verdict =="
 has_headers || echo "  ! ACTION: sudo apt update && sudo apt install linux-headers-\$(uname -r)"
 { has_headers && ! valid_headers; } && echo "  ! ACTION: sudo apt install --reinstall linux-headers-\$(uname -r)"
 { sig_enforced || lockdown_active; } && echo "  ! 内核强制模块签名/lockdown:需关闭 Secure Boot 或 module.sig_enforce=0,否则无法加载。"
+{ [ "$(kernel_arch)" = x86_64 ] && ! is_qnap && ! any_pwm; } && echo "  i 非 QNAP 且暂无 pwm:安装后容器会自动尝试内置 it87(覆盖 IT8613E 等较新 ITE 芯片)。"
 fancontrol_running && echo "  ! ACTION: sudo systemctl disable --now fancontrol  (否则两个程序抢风扇)"
 command -v docker >/dev/null || echo "  ! 未安装 Docker。"
 echo "  (无 ! 行即环境就绪)"

@@ -1,0 +1,225 @@
+it87-dkms (20230126) UNRELEASED; urgency=medium
+
+  [ Frank Crawford ]
+  * Added debian controls
+  * Multiple other updates
+
+it87-dkms (20210204) UNRELEASED; urgency=medium
+
+  [ Flippo24 ]
+  * IT8528E test
+  * IT8528 test
+
+  [ Frank Crawford ]
+  * Added definition for IT8688E as clone of IT8686E based on online comments.
+
+  [ Hannes Haberl ]
+  * Fix fallthrough warning
+
+ -- Hannes Haberl <hannes.haberl@student.tugraz.at>  Sat, 03 Apr 2021 00:11:40 +0200
+
+it87-dkms (1.20181809) unstable; urgency=medium
+
+  [ Guenter Roeck ]
+  * it87: upstream version
+  * it87: Initial / experimental support for IT8783E/F
+  * it87: Add missing chip name
+  * it87: Support older kernels
+  * it87: Remove artifact from initial code changes
+  * it87: Add experimental support for IT8771E, IT8772E
+  * it87: IT8783E/F only support three fans
+  * it87: Add experimental support for IT8781F and IT8782F
+  * it87: IT8781F and IT8782F support monitoring 5 fans
+  * it87: Do not attempt to re-route VIN7
+  * it87: VIN7 does not depend on bit 2 of reg2C
+  * Add compat.h for backwards compatibility
+  * Merge with latest upstream version
+  * sync with Jean's generic version. Drop support for unknown/untested chips
+  * Drop unsupported chips from README file
+  * sync with upstream version
+  * Add temperature offset register support, and lots of cleanup (experimental)
+
+  [ Guenter ]
+  * fix offset register access
+
+  [ Guenter Roeck ]
+  * sync w/ upstream, plus preliminary PECI support
+  * Synchronize with upstream version
+  * Add support for IT8781F
+  * Add feature flags for fan count and 16-bit fan configuration
+  * Add feature flag for VID support
+
+  [ Zlika ]
+  * Add support for IT8786E.
+
+  [ Guenter Roeck ]
+  * sync README with upstream version
+  * Formatting cleanup
+  * Experimental support for ITE8790E
+  * Some cleanup, plus AVCC3 support for ITE8620E
+  * Various enhancements
+  * Add support for two Super-IO chips
+  * Fix superio enable sequence for SIO address 0x4e
+  * Rearrange code to avoid forward declarations
+  * Various enhancements, cleanup, and fixes
+  * Support for newer autopwm, plus other changes and cleanup
+  * Add support for IT8628E and IT8732F
+  * Synchronize with upstream version
+  * Add feature flag indicating that VIN3 is connected to 5V
+  * Update README to match upstream documentation
+  * Add support for IT8622E
+  * Improve IT8622 support
+  * Ensure that pwm control cache is current before updating values
+  * Add preliminary support for IT8792E
+  * Experimental support for IT8607E
+  * Add TODO file
+  * Fix fan4_ctl detection for IT8620, IT8628
+  * Do not overwrite bit 2..6 of pwm control registers
+  * Fix feature mask for IT8792E (IT8733E)
+  * Add 4th fan control and measurement for IT8732E
+  * Update TODO: 4th fan control for IT8732E is now supported
+  * Force chip ID only if a chip has been found
+  * Add multi-bank and initial IT8686E support
+  * Separate internal scaling from 12mV ADC
+
+  [ Drew ]
+  * Added preliminary support for IT8665E
+
+  [ Guenter Roeck ]
+  * Add support for chip specific register sets
+  * Update TODO and README files
+  * Preliminary support for IT8655E
+  * Improve AVCC3 support
+  * Add feature flag FEAT_FANCTL_ONOFF
+  * Add register map
+  * Register map as CSV
+  * Add limit support for temp 4-6
+  * Various improvements
+  * Fix up temp offset register addresses
+  * Add support for 11mV ADC
+  * FEAT_TEMP_PECI does not apply to multi-bank chips.
+  * Disable access to 2nd Super-IO chip
+  * Blacklist IT8792E on AX370-Gaming K7
+
+  [ andreychernyshev ]
+  * Add support for IT8613E
+
+  [ Guenter Roeck ]
+  * Fix up support for IT8613E
+  * Introduce FEAT_NEW_TEMPMAP
+
+  [ koji54 ]
+  * Add Gigabyte AX370-Gaming 5 to IT8792E blacklist
+
+  [ Guenter Roeck ]
+  * Initialize register pointers before using them
+  * Fix whitespace issues
+
+  [ Justin Maggard ]
+  * Add support for IT8625E
+  * Fix up support for IT8625E
+
+  [ Guenter Roeck ]
+  * Mark 2nd Super-IO chip on AB350M-D3H as broken
+  * Provide blacklist module parameter to override blacklist.
+  * Declare dummy vid functions if needed
+  * Add support for 6 temperature limit registers on IT8628E
+  * Drop FEAT_TEMP_OFFSET
+  * IT8607 does not support the 1st fan, only fan2-3
+
+  [ Enigma ]
+  * README missing necessary build instructions
+
+  [ Guenter Roeck ]
+  * Fix accesses to IT8792E
+  * Drop ACPI mutex code
+  * Force IT8790E and IT8792E into configuration mode
+  * IT8655E and IT8665E both support internal register scaling
+
+  [ Yohan Pereira ]
+  * Create the hwmon folder if it does not exist
+
+  [ Guenter Roeck ]
+  * Update pwm cached control registers before writing pwm enable
+  * Rework pwm temperature mapping
+  * Makefile: Add support for compressed modules
+  * Add 'ignore_resource_conflict' error
+  * Try to add support for automatically detected build directories
+  * Remove TODO
+  * Update README
+  * Fix reworked temperature mapping
+  * Improve temperature sensor type detection for IT8686
+  * Always restore previous bank register after reading/writing data
+  * Simplify and fix temperature sensor type detection
+  * Makefile: Generate version.h
+  * it87: Display driver version
+  * Ignore version.h
+  * Remove version.h when running clean, and clean does not depend on version.h
+  * Fix FAN_TAC5 detection for IT8665E
+  * Disable SMBus access while accessing Enviromnental Controller registers
+  * Add MMIO support
+  * Update README to describe new module parameters
+  * Print MMIO address into kernel log
+  * IT8655E supports MMIO
+  * Fix mmio resource request
+  * Add SMBus bitmap for IT8622
+  * Improve AMDTSI temp type detection, and temp 4 type detection on IT8622
+  * Add support for 4th temperature sensor on IT8622
+  * Drop version.h
+  * Checkpatch cleanup: Double semicolon, missing space
+  * Checkpatch cleanup: Use octal permissions for module parameters
+  * Checkpatch cleanup: Use octal file permissions
+  * Checkpatch cleanup: Opening brackets
+  * Checkpatch cleanup: Line length
+  * Makefile: Versioning, take three
+  * Experimental support for IT8606E
+  * Report actual chip name, not its ID
+  * Do not disable SMBs unless really necessary
+  * Fix PECI/AMDTSI selection
+
+  [ Burt P ]
+  * Add optional DKMS target to Makefile
+
+  [ Guenter Roeck ]
+  * Add ISSUES file
+  * Add more known problems to ISSUES file
+  * Add comment explaining why smbus_disable is needed in probe
+  * Revert "Add optional DKMS target to Makefile"
+  * README: Fix typo
+
+  [ Burt P ]
+  * Add optional DKMS target to Makefile (v2)
+  * Makefile: DKMS fix
+
+  [ Guenter Roeck ]
+  * Fix up fan / pwm detection for IT8625/IT8665
+  * Save and restore bank around envmon register accesses if needed
+  * Fix scaling for IT8732F
+  * Add preliminary support for IT8736F and IT8738E
+  * Fix fan control for IT8736F
+
+  [ mettacrawler ]
+  * Support Arch
+
+  [ Guenter Roeck ]
+  * Provide vid_from_reg and vid_which_vrm if needed
+  * Revert "Provide vid_from_reg and vid_which_vrm if needed"
+  * Fix temperature type for peci/amdtsi if diode/thermistor is also set
+  * Enable all temperature registers for IT8655E and IT8665E
+
+  [ airbjorn ]
+  * fixing indents in #defines: replacing spaces by tabs
+  * replaced two spaces with one
+  * auto-adjust loop threshold to changes in the array size
+
+  [ Burt P ]
+  * README: Add dkms instructions for #95
+
+  [ Guenter Roeck ]
+  * Add driver removal notice
+
+  [ Hannes Haberl ]
+  * Fix make dkms
+  * Use $(KERNEL_BUILD) as kernel source directory
+
+ -- Hannes Haberl <hannes.haberl@student.tugraz.at>  Tue, 14 Aug 2018 21:36:06 +0200

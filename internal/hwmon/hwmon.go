@@ -174,6 +174,23 @@ func (p PWM) SetManual() error {
 	return os.WriteFile(p.enable, []byte("1"), 0o644)
 }
 
+// SetAuto hands the channel back to the driver's own automatic fan control
+// (pwmN_enable=2) and reports whether that mode was actually accepted. Returns
+// false when there is no enable knob or the driver rejects automatic mode
+// (read-back != 2) — e.g. a driver that only supports manual control. Used on a
+// clean shutdown so a stopped controller lets the hardware resume managing the
+// fan instead of leaving it pinned at the last manual duty.
+func (p PWM) SetAuto() bool {
+	if p.enable == "" {
+		return false
+	}
+	if os.WriteFile(p.enable, []byte("2"), 0o644) != nil {
+		return false
+	}
+	v, ok := readInt(p.enable)
+	return ok && v == 2
+}
+
 // --- helpers ---------------------------------------------------------------
 
 // nodeIndex extracts N from a node name like "fan3_input" given prefix "fan"

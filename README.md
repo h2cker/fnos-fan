@@ -37,7 +37,7 @@ curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 fnos-fan status      查看状态
 fnos-fan logs        看日志
 fnos-fan restart     重启
-fnos-fan stop        停止(会安全把风扇拉满 100%,勿用 docker kill)
+fnos-fan stop        停止(把风扇交还硬件自动控制,勿用 docker kill)
 fnos-fan update      更新到最新版
 fnos-fan uninstall   卸载
 ```
@@ -57,15 +57,21 @@ fnos-fan uninstall   卸载
   curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo ALLOWED_HOSTS=nas.example.com bash
   ```
 - 端口冲突可改 `WEB_PORT`。容器用 **host 网络**直接绑 NAS 端口;若 fnOS 跑在**非桥接(NAT)虚拟机**里,NAS 的 IP 可能不在局域网直连段,需在虚拟机平台做端口转发或改桥接网卡。
-- 停止务必用 `fnos-fan stop` / `docker stop`(触发“风扇拉满”安全恢复),**不要用 `docker kill`**。
+- 停止务必用 `fnos-fan stop` / `docker stop`(会把风扇交还硬件自动控制;驱动不支持自动模式的板子则拉满 100%),**不要用 `docker kill`**(会让风扇卡在最后的手动转速)。
 
 ## 故障安全
 
-退出、控制循环异常、或**所有温度传感器都读不到**时,风扇强制拉满 100%;进程崩溃后容器自动重启重新接管,绝不会把风扇卡在低速。
+控制循环异常、或**所有温度传感器都读不到**时,风扇强制拉满 100%;正常停止/卸载则把风扇**交还硬件自动控制**(驱动无自动模式的板子才拉满)。进程崩溃后容器自动重启重新接管,绝不会把风扇卡在低速。
 
 ## 内核升级后
 
 fnOS 升级内核后:① 重启;② `sudo apt install linux-headers-$(uname -r)`;③ `fnos-fan restart`。容器会按新内核版本自动重新编译模块。
+
+## 非 QNAP 机型(通用 ITE 主板)
+
+不是 QNAP 也可能能用。很多 x86 迷你 NAS(例如 Beelink ME mini,芯片 IT8613E)用 ITE Super-I/O 管风扇。容器在**非 QNAP** 板子上、且系统暂时读不到任何 pwm 时,会**自动**编译并加载内置的 `it87`(frankcrawford 分支,支持主线 it87 不认的较新 ITE 芯片),把风扇暴露成标准 hwmon pwm,fanctld 随即接管——与 QNAP 路径一样全自动、无需手动操作。
+
+前提同样是:已装内核头文件、内核未强制模块签名。芯片不被 it87 支持的板子无法控制(`fnos-fan logs` 会写明)。
 
 ## 已知限制
 

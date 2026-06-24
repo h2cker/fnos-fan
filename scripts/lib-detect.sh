@@ -54,3 +54,7 @@ lockdown_active() {
 
 # fancontrol_running returns 0 when a competing fan daemon is writing PWM.
 fancontrol_running() { pgrep -x fancontrol >/dev/null 2>&1 || pgrep -f 'pwmconfig' >/dev/null 2>&1; }
+
+# any_pwm returns 0 when at least one hwmon pwm output (a controllable fan
+# channel) is present — i.e. some driver already exposes fan control.
+any_pwm() { compgen -G "/sys/class/hwmon/hwmon*/pwm[0-9]" >/dev/null 2>&1; }

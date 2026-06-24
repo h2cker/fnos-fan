@@ -87,8 +87,8 @@ func main() {
 	}
 
 	<-ctx.Done()
-	log.Println("shutting down — failsafe: fans -> 100%")
-	ctrl.Failsafe()
+	log.Println("shutting down — handing fans back to hardware automatic control (100% where unsupported)")
+	ctrl.Restore()
 	_ = srv.Close()
 }
 

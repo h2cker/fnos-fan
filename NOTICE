@@ -13,6 +13,19 @@ This repository bundles third-party source code:
     and the GPL-2.0-or-later license terms of the original authors apply to
     every file under kmod/qnap8528/. See the SPDX headers in the source.
 
+  kmod/it87/ — the it87 Linux Super-I/O hardware-monitoring driver
+    Copyright (c) Chris Gauthron, Jean Delvare, Frank Crawford and contributors (lm-sensors)
+    Source:  https://github.com/frankcrawford/it87
+    License: GPL-2.0-or-later  (SPDX-License-Identifier: GPL-2.0-or-later)
+
+    Out-of-tree fork adding support for newer ITE Super-I/O chips (e.g. IT8613E)
+    not yet covered by the in-tree it87. Vendored for offline / reproducible
+    image builds (only the upstream Research/ datasheet archive is omitted; the
+    module source is intact); built and loaded only on non-QNAP x86 boards that
+    expose no pwm otherwise. All copyright and the GPL-2.0-or-later license terms
+    of the original authors apply to every file under kmod/it87/. See the SPDX
+    headers in the source.
+
 The remaining code in this repository — the fanctld Go daemon (cmd/, internal/),
 the shell scripts (scripts/, install.sh) and the web UI (internal/api/web/) —
 is original work by the repository owner, licensed under GPL-3.0-or-later.

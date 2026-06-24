@@ -1,0 +1,10 @@
+/*.mod
+/*.mod.*
+/*.cmd
+/*.ko
+/*.o
+
+/Module.symvers
+/modules.order
+
+/Research/Specs/Private

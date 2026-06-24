@@ -11,6 +11,8 @@
 # release artifacts
 /dist/
 .tmp-kmod/
+.tmp-it87/
 
-# nested clone left in vendored source (safe to delete: rm -rf kmod/qnap8528/.git)
+# nested clone left in vendored source (safe to delete: rm -rf kmod/<m>/.git)
 kmod/qnap8528/.git/
+kmod/it87/.git/

@@ -20,6 +20,7 @@ sha_emit() {
 
 # 1. vendor the kernel-module source if missing
 [ -f kmod/qnap8528/src/Makefile ] || { echo "[release] vendoring qnap8528 ..."; scripts/vendor-kmod.sh; }
+[ -f kmod/it87/Makefile ]         || { echo "[release] vendoring it87 ...";     scripts/vendor-it87.sh; }
 
 # 2. build (amd64 image even on an ARM build host)
 echo "[release] building $IMAGE:$VERSION ($PLATFORM) ..."

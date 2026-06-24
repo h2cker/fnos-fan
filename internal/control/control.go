@@ -131,6 +131,22 @@ func (c *Controller) Failsafe() {
 	}
 }
 
+// Restore hands every fan back to the hardware's own automatic control on a
+// clean shutdown, so stopping or uninstalling the controller lets the firmware
+// resume managing the fan instead of leaving it stuck at our last manual duty.
+// A channel whose driver has no automatic mode is forced to 100% as a safe
+// fallback (better loud than too slow). Lock-free (chips is immutable).
+func (c *Controller) Restore() {
+	for _, ch := range c.chips {
+		for _, p := range ch.PWMs {
+			if !p.SetAuto() {
+				_ = p.SetManual()
+				_ = p.Set(255)
+			}
+		}
+	}
+}
+
 func (c *Controller) tick() {
 	// A bug in the loop must not silently leave fans at a low duty: drive them
 	// full, then crash so the container restart re-establishes control.

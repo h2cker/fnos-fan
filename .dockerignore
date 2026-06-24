@@ -6,3 +6,4 @@ data/
 /fanctld
 /fnos-fan
 .tmp-kmod
+.tmp-it87

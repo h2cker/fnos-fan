@@ -482,21 +482,34 @@ function rebuildSensors(chips) {
   sel.value = cur || "";
 }
 function renderSensors(chips) {
-  const temps = [], fans = [];
-  chips.forEach(c => {
-    (c.temps || []).forEach(t => temps.push({ c, t }));
-    (c.fans || []).forEach(f => fans.push({ c, f }));
-  });
   const tl = $("#tempList"), fl = $("#fanList");
-  tl.innerHTML = temps.length ? temps.map(({ c, t }) => {
-    const cls = t.ok ? tempClass(t.c) : "";
-    return `<div class="row"><span class="name">${esc(t.label || ("温度 " + t.index))}</span>` +
-      `<span class="val ${cls}">${t.ok ? t.c.toFixed(1) : "—"}<span class="u"> °C</span></span></div>`;
-  }).join("") : '<div class="empty">未检测到温度</div>';
-  fl.innerHTML = fans.length ? fans.map(({ c, f }) =>
-    `<div class="row"><span class="name">${esc(f.label || ("风扇 " + f.index))}</span>` +
-    `<span class="val">${f.ok ? f.rpm : "—"}<span class="u"> rpm</span></span></div>`
-  ).join("") : '<div class="empty">未检测到风扇（驱动可能未加载）</div>';
+
+  // Temps grouped by chip — the chip name (nvme / coretemp / it8613 …) tells you
+  // what each reading is and disambiguates otherwise-identical "温度 1" labels.
+  let th = "";
+  chips.forEach(c => {
+    const ts = c.temps || [];
+    if (!ts.length) return;
+    th += `<div class="grouphd">${esc(c.name || "?")}</div>` + ts.map(t => {
+      const cls = t.ok ? tempClass(t.c) : "";
+      return `<div class="row"><span class="name">${esc(t.label || ("温度 " + t.index))}</span>` +
+        `<span class="val ${cls}">${t.ok ? t.c.toFixed(1) : "—"}<span class="u"> °C</span></span></div>`;
+    }).join("");
+  });
+  tl.innerHTML = th || '<div class="empty">未检测到温度</div>';
+
+  // Fans grouped by chip; skip channels reading 0 rpm — those are unconnected
+  // tach headers (e.g. a chip exposes 2-3 channels but only one has a fan).
+  let fh = "";
+  chips.forEach(c => {
+    const fs = (c.fans || []).filter(f => f.ok && f.rpm > 0);
+    if (!fs.length) return;
+    fh += `<div class="grouphd">${esc(c.name || "?")}</div>` + fs.map(f =>
+      `<div class="row"><span class="name">${esc(f.label || ("风扇 " + f.index))}</span>` +
+      `<span class="val">${f.rpm}<span class="u"> rpm</span></span></div>`
+    ).join("");
+  });
+  fl.innerHTML = fh || '<div class="empty">未检测到风扇（驱动可能未加载）</div>';
 }
 function esc(s) { return String(s).replace(/[&<>]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])); }
 
