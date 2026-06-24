@@ -76,7 +76,7 @@ fnOS 升级内核后:① 重启;② `sudo apt install linux-headers-$(uname -r)`
 ## 致谢与许可
 
 - 内核模块 **qnap8528** 的版权与 **GPL-2.0-or-later** 许可归原作者 **[0xGiddi](https://github.com/0xGiddi/qnap8528)** 及贡献者所有;本仓库原样 vendoring 用于离线构建,详见 [NOTICE](NOTICE)。
-- 仓库其余代码(Go 守护进程、脚本、Web UI)为本项目原创。
+- 仓库其余代码(Go 守护进程、脚本、Web UI)为本项目原创,采用 **GPL-3.0-or-later** 许可,详见 [LICENSE](LICENSE)。
 
 ## 二次开发 / 自建分发
 

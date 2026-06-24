@@ -15,4 +15,10 @@ This repository bundles third-party source code:
 
 The remaining code in this repository — the fanctld Go daemon (cmd/, internal/),
 the shell scripts (scripts/, install.sh) and the web UI (internal/api/web/) —
-is original work by the repository owner.
+is original work by the repository owner, licensed under GPL-3.0-or-later.
+See the LICENSE file for the full GNU General Public License v3 text.
+
+Combining the above GPL-2.0-or-later kernel module with this GPL-3.0-or-later
+code is permitted: the module is offered "or-later", so the combined work may be
+used under GPL-3.0-or-later. The module's own files keep their original
+GPL-2.0-or-later SPDX headers.

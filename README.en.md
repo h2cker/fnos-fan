@@ -76,7 +76,7 @@ When fnOS upgrades the kernel: (1) reboot, (2) `sudo apt install linux-headers-$
 ## Credits & license
 
 - The **qnap8528** kernel module is copyright its original author **[0xGiddi](https://github.com/0xGiddi/qnap8528)** and contributors, licensed **GPL-2.0-or-later**; vendored unmodified here for offline builds — see [NOTICE](NOTICE).
-- The rest of this repository (the Go daemon, scripts, web UI) is original work.
+- The rest of this repository (the Go daemon, scripts, web UI) is original work, licensed **GPL-3.0-or-later** — see [LICENSE](LICENSE).
 
 ## Building / self-hosting
 
