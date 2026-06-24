@@ -1,0 +1,16 @@
+# runtime data: config + compiled-module cache
+/data/
+
+# build artifacts
+/fanctld
+/fnos-fan
+*.ko
+*.o
+*.mod.c
+
+# release artifacts
+/dist/
+.tmp-kmod/
+
+# nested clone left in vendored source (safe to delete: rm -rf kmod/qnap8528/.git)
+kmod/qnap8528/.git/

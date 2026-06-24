@@ -1,0 +1,8 @@
+.git
+**/.git
+dist/
+data/
+*.tar.gz
+/fanctld
+/fnos-fan
+.tmp-kmod

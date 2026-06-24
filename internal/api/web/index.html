@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="zh-Hans">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>fnos-fan</title>
+<style>
+  /* Design language: Apple System Settings / Fluent / Ant Design system-UI.
+     Neutral token base, single accent (system blue). One radius scale.
+     Theme locked to auto (prefers-color-scheme). No build step, no CDN. */
+  :root {
+    --bg: #f2f2f5;
+    --surface: #ffffff;
+    --surface-2: #f7f7f9;
+    --border: #e4e4e7;
+    --border-strong: #d4d4d8;
+    --text: #1d1d1f;
+    --text-2: #5f5f65;
+    --text-3: #8a8a90;
+    --accent: #0a73e6;
+    --accent-weak: #e9f1fd;
+    --track: #e6e6ea;
+    --ok: #1f9d57;
+    --warn: #c47d12;
+    --hot: #d83b2e;
+    --radius: 14px;
+    --radius-sm: 9px;
+    --radius-xs: 6px;
+    --shadow-sm: 0 1px 1px rgba(0,0,0,.04), 0 1px 3px rgba(0,0,0,.05);
+    --r-grid: rgba(0,0,0,.06);
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Cascadia Code", Menlo, Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Roboto, Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161618;
+      --surface: #1f1f22;
+      --surface-2: #28282c;
+      --border: #34343a;
+      --border-strong: #44444c;
+      --text: #f3f3f5;
+      --text-2: #a6a6ad;
+      --text-3: #76767e;
+      --accent: #4c9cff;
+      --accent-weak: #1c2c40;
+      --track: #34343a;
+      --ok: #43c578;
+      --warn: #e0a23a;
+      --hot: #ff5e52;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --r-grid: rgba(255,255,255,.07);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    font-family: var(--sans);
+    font-size: 14px;
+    line-height: 1.45;
+    color: var(--text);
+    background: var(--bg);
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 22px 18px 64px; }
+
+  /* top bar */
+  .topbar { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 20px; }
+  .brand { display: flex; align-items: baseline; gap: 10px; }
+  .brand h1 { font-size: 19px; font-weight: 600; letter-spacing: -0.01em; margin: 0; }
+  .brand .ver { font-size: 12px; color: var(--text-3); font-family: var(--mono); }
+  .conn { display: inline-flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--text-2); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-3); flex: none; }
+  .conn.ok .dot { background: var(--ok); }
+  .conn.err .dot { background: var(--hot); }
+
+  /* summary tiles */
+  .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 22px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 13px 15px; box-shadow: var(--shadow-sm); }
+  .tile .k { font-size: 12px; color: var(--text-2); margin-bottom: 6px; }
+  .tile .v { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .tile .v .u { font-size: 13px; font-weight: 500; color: var(--text-3); margin-left: 2px; }
+  .tile .v.warn { color: var(--warn); }
+  .tile .v.hot { color: var(--hot); }
+
+  /* section */
+  .section { margin-bottom: 22px; }
+  .section > .label { font-size: 12.5px; font-weight: 600; color: var(--text-2); text-transform: none; padding: 0 4px 8px; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: var(--shadow-sm); overflow: hidden; }
+
+  /* sensor rows */
+  .cols { display: grid; grid-template-columns: 1fr 1fr; }
+  .cols > div + div { border-left: 1px solid var(--border); }
+  @media (max-width: 560px) { .cols { grid-template-columns: 1fr; } .cols > div + div { border-left: none; border-top: 1px solid var(--border); } }
+  .grouphd { font-size: 11.5px; color: var(--text-3); padding: 11px 16px 7px; letter-spacing: .01em; }
+  .row { display: flex; align-items: center; justify-content: space-between; padding: 9px 16px; border-top: 1px solid var(--border); }
+  .row:first-of-type { border-top: none; }
+  .row .name { color: var(--text); font-size: 13px; }
+  .row .name small { color: var(--text-3); font-family: var(--mono); font-size: 11px; }
+  .row .val { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; color: var(--text); }
+  .row .val.warn { color: var(--warn); }
+  .row .val.hot { color: var(--hot); }
+  .row .val .u { color: var(--text-3); font-size: 11px; }
+  .empty { padding: 22px 16px; color: var(--text-3); font-size: 13px; text-align: center; }
+
+  /* control panel body */
+  .ctl { padding: 16px; }
+  .ctl-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+  .ctl-row + .ctl-row { margin-top: 16px; }
+
+  /* segmented control (iOS-style) */
+  .seg { display: inline-flex; background: var(--track); border-radius: var(--radius-sm); padding: 3px; gap: 2px; }
+  .seg button { appearance: none; border: 0; background: transparent; color: var(--text-2); font: inherit; font-size: 13px; font-weight: 500; padding: 6px 18px; border-radius: 7px; cursor: pointer; transition: background .15s, color .15s; }
+  .seg button[aria-pressed="true"] { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+
+  /* preset chips */
+  .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .chip { appearance: none; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text); font: inherit; font-size: 13px; padding: 7px 14px; border-radius: 999px; cursor: pointer; transition: background .15s, border-color .15s, color .15s; }
+  .chip:hover { border-color: var(--accent); }
+  .chip[aria-pressed="true"] { background: var(--accent-weak); border-color: var(--accent); color: var(--accent); }
+
+  /* sliders */
+  .field { margin-top: 4px; }
+  .field .flabel { display: flex; align-items: baseline; justify-content: space-between; font-size: 13px; color: var(--text-2); margin-bottom: 9px; }
+  .field .flabel b { color: var(--text); font-family: var(--mono); font-variant-numeric: tabular-nums; font-weight: 600; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 100%; height: 4px; border-radius: 999px; background: var(--track); outline: none; margin: 8px 0; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 1px 3px rgba(0,0,0,.2); cursor: pointer; }
+  input[type=range]::-moz-range-thumb { width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border-strong); box-shadow: 0 1px 3px rgba(0,0,0,.2); cursor: pointer; }
+  input[type=range]:focus-visible { box-shadow: 0 0 0 3px var(--accent-weak); }
+
+  /* curve editor */
+  .curve-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+  .curve-head .hint { font-size: 12px; color: var(--text-3); }
+  .curve-wrap { width: 100%; }
+  svg.curve { display: block; width: 100%; height: auto; touch-action: none; user-select: none; }
+  svg.curve .grid { stroke: var(--r-grid); stroke-width: 1; }
+  svg.curve .axis { fill: var(--text-3); font-size: 11px; font-family: var(--mono); }
+  svg.curve .area { fill: var(--accent); opacity: .10; }
+  svg.curve .line { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+  svg.curve .handle { fill: var(--surface); stroke: var(--accent); stroke-width: 2; cursor: grab; }
+  svg.curve .handle:active { cursor: grabbing; }
+  svg.curve .marker { stroke: var(--text-3); stroke-width: 1; stroke-dasharray: 3 3; }
+  svg.curve .markerdot { fill: var(--text); }
+  svg.curve .markerlbl { fill: var(--text-2); font-size: 11px; font-family: var(--mono); }
+
+  /* sensor select */
+  select { appearance: none; font: inherit; font-size: 13px; color: var(--text); background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--radius-sm); padding: 8px 30px 8px 12px; cursor: pointer; max-width: 60%;
+    background-image: linear-gradient(45deg, transparent 50%, var(--text-3) 50%), linear-gradient(135deg, var(--text-3) 50%, transparent 50%);
+    background-position: calc(100% - 16px) center, calc(100% - 11px) center; background-size: 5px 5px, 5px 5px; background-repeat: no-repeat; }
+  select:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-weak); }
+
+  /* advanced disclosure */
+  details.adv { margin-top: 16px; border-top: 1px solid var(--border); padding-top: 12px; }
+  details.adv summary { cursor: pointer; font-size: 13px; color: var(--text-2); list-style: none; display: flex; align-items: center; gap: 6px; }
+  details.adv summary::-webkit-details-marker { display: none; }
+  details.adv summary .caret { transition: transform .15s; color: var(--text-3); }
+  details.adv[open] summary .caret { transform: rotate(90deg); }
+  .adv-grid { margin-top: 12px; display: grid; gap: 16px; }
+
+  .hidden { display: none !important; }
+
+  /* sync indicator */
+  .sync { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-3); }
+  .sync .dot { width: 7px; height: 7px; }
+  .sync.saving .dot { background: var(--warn); }
+  .sync.saved .dot { background: var(--ok); }
+  .sync.error .dot { background: var(--hot); }
+
+  .foot { margin-top: 26px; text-align: center; font-size: 11.5px; color: var(--text-3); }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand"><h1>风扇控制</h1><span class="ver">fnos-fan</span></div>
+    <span id="conn" class="conn"><span class="dot"></span><span id="connText">连接中</span></span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="k">当前模式</div><div class="v" id="tMode">-</div></div>
+    <div class="tile"><div class="k">决策温度</div><div class="v" id="tTemp">-<span class="u">°C</span></div></div>
+    <div class="tile"><div class="k">目标转速</div><div class="v" id="tTarget">-<span class="u">%</span></div></div>
+  </div>
+
+  <div class="section">
+    <div class="label">传感器</div>
+    <div class="panel">
+      <div class="cols">
+        <div>
+          <div class="grouphd">温度</div>
+          <div id="tempList"><div class="empty">读取中</div></div>
+        </div>
+        <div>
+          <div class="grouphd">风扇</div>
+          <div id="fanList"><div class="empty">读取中</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="label">控制</div>
+    <div class="panel">
+      <div class="ctl">
+
+        <div class="ctl-row">
+          <div class="seg" role="group" aria-label="控制模式">
+            <button id="modeAuto" aria-pressed="true">自动</button>
+            <button id="modeManual" aria-pressed="false">手动</button>
+          </div>
+          <span id="sync" class="sync"><span class="dot"></span><span id="syncText">已就绪</span></span>
+        </div>
+
+        <!-- AUTO -->
+        <div id="autoPanel">
+          <div class="ctl-row" style="margin-top:18px;">
+            <div class="chips" role="group" aria-label="预设">
+              <button class="chip" data-preset="quiet" aria-pressed="false">静音</button>
+              <button class="chip" data-preset="balanced" aria-pressed="false">均衡</button>
+              <button class="chip" data-preset="perf" aria-pressed="false">性能</button>
+              <button class="chip" data-preset="custom" aria-pressed="false">自定义</button>
+            </div>
+          </div>
+
+          <div class="curve-head" style="margin-top:18px;">
+            <span class="hint">拖动圆点调节曲线，空白处点击新增，双击圆点删除</span>
+          </div>
+          <div class="curve-wrap">
+            <svg class="curve" id="curveSvg" viewBox="0 0 640 280" preserveAspectRatio="xMidYMid meet" aria-label="温度转速曲线"></svg>
+          </div>
+
+          <div class="ctl-row" style="margin-top:16px;">
+            <label for="sensorSel" style="font-size:13px;color:var(--text-2);">温度源</label>
+            <select id="sensorSel"><option value="">自动（最热传感器）</option></select>
+          </div>
+        </div>
+
+        <!-- MANUAL -->
+        <div id="manualPanel" class="hidden">
+          <div class="field" style="margin-top:18px;">
+            <div class="flabel"><span>固定转速</span><b id="manualVal">50%</b></div>
+            <input type="range" id="manualRange" min="0" max="100" step="1" value="50">
+          </div>
+        </div>
+
+        <details class="adv">
+          <summary><span class="caret">›</span>高级</summary>
+          <div class="adv-grid">
+            <div class="field">
+              <div class="flabel"><span>最低转速（自动模式不低于此值）</span><b id="minVal">25%</b></div>
+              <input type="range" id="minRange" min="0" max="100" step="1" value="25">
+            </div>
+            <div class="field">
+              <div class="flabel"><span>采样间隔</span><b id="intVal">5s</b></div>
+              <input type="range" id="intRange" min="1" max="30" step="1" value="5">
+            </div>
+          </div>
+        </details>
+
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">数据每 2 秒刷新 · 设置自动保存</div>
+</div>
+
+<script>
+"use strict";
+const $ = s => document.querySelector(s);
+const SVGNS = "http://www.w3.org/2000/svg";
+const TMIN = 20, TMAX = 90;
+const M = { l: 40, r: 14, t: 14, b: 26 };
+const VW = 640, VH = 280;
+const PW = VW - M.l - M.r, PH = VH - M.t - M.b;
+
+let cfg = null;            // full server config object, preserved on round-trips
+let curve = [];            // [{t:°C, p:%}] working copy
+let mode = "auto";
+let driveTemp = null;
+let dragging = false, suppressClick = false;
+let lastSensorKey = "";    // to know when to rebuild the dropdown
+
+const PRESETS = {
+  quiet:    [{t:32,p:0},{t:48,p:18},{t:62,p:42},{t:74,p:75},{t:84,p:100}],
+  balanced: [{t:30,p:15},{t:46,p:35},{t:58,p:60},{t:70,p:85},{t:80,p:100}],
+  perf:     [{t:30,p:40},{t:46,p:65},{t:58,p:88},{t:68,p:100}],
+};
+
+const pwmToPct = v => Math.round((v / 255) * 100);
+const pctToPwm = p => Math.round((p / 100) * 255);
+const clamp = (v, lo, hi) => v < lo ? lo : v > hi ? hi : v;
+const tempClass = c => c >= 70 ? "hot" : c >= 55 ? "warn" : "";
+
+// ---- coordinate mapping ----
+const xFor = t => M.l + (clamp(t, TMIN, TMAX) - TMIN) / (TMAX - TMIN) * PW;
+const yFor = p => M.t + (1 - clamp(p, 0, 100) / 100) * PH;
+const tFor = x => TMIN + (x - M.l) / PW * (TMAX - TMIN);
+const pFor = y => (1 - (y - M.t) / PH) * 100;
+
+// interpolate % at a given temperature along the working curve
+function pctAt(temp) {
+  const s = curve.slice().sort((a, b) => a.t - b.t);
+  if (!s.length) return 0;
+  if (temp <= s[0].t) return s[0].p;
+  if (temp >= s[s.length - 1].t) return s[s.length - 1].p;
+  for (let i = 1; i < s.length; i++) {
+    if (temp < s[i].t) {
+      const a = s[i - 1], b = s[i];
+      const r = (temp - a.t) / (b.t - a.t);
+      return a.p + r * (b.p - a.p);
+    }
+  }
+  return s[s.length - 1].p;
+}
+
+// ---- networking ----
+async function getJSON(u) { const r = await fetch(u); if (!r.ok) throw new Error(r.status); return r.json(); }
+
+let saveTimer = null;
+function setSync(state, text) {
+  const el = $("#sync"); el.className = "sync " + (state || "");
+  $("#syncText").textContent = text || ({ saving: "保存中", saved: "已保存", error: "保存失败" }[state] || "已就绪");
+}
+function scheduleSave() {
+  setSync("saving");
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(saveNow, 450);
+}
+async function saveNow() {
+  if (!cfg) return;
+  cfg.mode = mode;
+  cfg.manual_pwm = pctToPwm(+$("#manualRange").value);
+  cfg.min_pwm = pctToPwm(+$("#minRange").value);
+  cfg.interval_sec = +$("#intRange").value || 5;
+  cfg.temp_sensor = $("#sensorSel").value;
+  cfg.curve = curve.slice().sort((a, b) => a.t - b.t).map(pt => ({ temp_c: Math.round(pt.t), pwm: pctToPwm(pt.p) }));
+  try {
+    const r = await fetch("/api/config", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(cfg) });
+    if (!r.ok) throw new Error(r.status);
+    cfg = await r.json();
+    setSync("saved");
+  } catch (e) { setSync("error"); }
+}
+
+// ---- mode + presets ----
+function setMode(m, save) {
+  mode = m;
+  $("#modeAuto").setAttribute("aria-pressed", m === "auto");
+  $("#modeManual").setAttribute("aria-pressed", m === "manual");
+  $("#autoPanel").classList.toggle("hidden", m !== "auto");
+  $("#manualPanel").classList.toggle("hidden", m !== "manual");
+  if (save) scheduleSave();
+}
+function curvesEqual(a, b) {
+  if (a.length !== b.length) return false;
+  const s = a.slice().sort((x, y) => x.t - y.t);
+  const t = b.slice().sort((x, y) => x.t - y.t);
+  return s.every((p, i) => Math.abs(p.t - t[i].t) <= 1 && Math.abs(p.p - t[i].p) <= 1);
+}
+function detectPreset() {
+  let active = "custom";
+  for (const k of Object.keys(PRESETS)) if (curvesEqual(curve, PRESETS[k])) { active = k; break; }
+  document.querySelectorAll(".chip").forEach(c => c.setAttribute("aria-pressed", c.dataset.preset === active));
+}
+function applyPreset(name) {
+  if (name === "custom") { detectPreset(); return; }
+  curve = PRESETS[name].map(p => ({ ...p }));
+  drawCurve(); detectPreset(); scheduleSave();
+}
+
+// ---- curve rendering ----
+function drawCurve() {
+  const svg = $("#curveSvg");
+  while (svg.firstChild) svg.removeChild(svg.firstChild);
+  const add = (tag, attrs, cls) => { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (cls) e.setAttribute("class", cls); svg.appendChild(e); return e; };
+
+  // gridlines + axis labels
+  [0, 50, 100].forEach(p => {
+    const y = yFor(p);
+    add("line", { x1: M.l, y1: y, x2: M.l + PW, y2: y }, "grid");
+    add("text", { x: M.l - 6, y: y + 3, "text-anchor": "end" }, "axis").textContent = p + "%";
+  });
+  [20, 40, 60, 80].forEach(t => {
+    const x = xFor(t);
+    add("line", { x1: x, y1: M.t, x2: x, y2: M.t + PH }, "grid");
+    add("text", { x: x, y: M.t + PH + 16, "text-anchor": "middle" }, "axis").textContent = t + "°";
+  });
+
+  const s = curve.slice().sort((a, b) => a.t - b.t);
+  // flatten ends so the visual reads as "held" below first / above last point
+  const pts = [{ t: TMIN, p: s[0].p }, ...s, { t: TMAX, p: s[s.length - 1].p }];
+  const line = pts.map(pt => xFor(pt.t) + "," + yFor(pt.p)).join(" ");
+  add("polygon", { points: line + " " + xFor(TMAX) + "," + yFor(0) + " " + xFor(TMIN) + "," + yFor(0) }, "area");
+  add("polyline", { points: line }, "line");
+
+  // current-temperature marker
+  if (driveTemp != null) {
+    const x = xFor(driveTemp), y = yFor(pctAt(driveTemp));
+    add("line", { x1: x, y1: M.t, x2: x, y2: M.t + PH }, "marker");
+    add("circle", { cx: x, cy: y, r: 3.5 }, "markerdot");
+    const lbl = add("text", { x: clamp(x + 6, M.l, M.l + PW - 60), y: M.t + 12 }, "markerlbl");
+    lbl.textContent = Math.round(driveTemp) + "° → " + Math.round(pctAt(driveTemp)) + "%";
+  }
+
+  // draggable handles
+  s.forEach((pt, i) => {
+    const realIdx = curve.indexOf(pt);
+    const h = add("circle", { cx: xFor(pt.t), cy: yFor(pt.p), r: 7 }, "handle");
+    h.addEventListener("pointerdown", ev => startDrag(ev, realIdx, h));
+    h.addEventListener("dblclick", ev => { ev.preventDefault(); removePoint(realIdx); });
+  });
+}
+
+function startDrag(ev, idx, handle) {
+  ev.preventDefault();
+  dragging = true;
+  handle.setPointerCapture(ev.pointerId);
+  const sorted = curve.slice().sort((a, b) => a.t - b.t);
+  const pos = sorted.indexOf(curve[idx]);
+  const loT = pos > 0 ? sorted[pos - 1].t + 1 : TMIN;
+  const hiT = pos < sorted.length - 1 ? sorted[pos + 1].t - 1 : TMAX;
+
+  const move = e => {
+    const pt = svgCoords(e);
+    curve[idx].t = Math.round(clamp(tFor(pt.x), loT, hiT));
+    curve[idx].p = Math.round(clamp(pFor(pt.y), 0, 100));
+    drawCurve();
+  };
+  const up = e => {
+    dragging = false; suppressClick = true;
+    handle.releasePointerCapture(ev.pointerId);
+    window.removeEventListener("pointermove", move);
+    window.removeEventListener("pointerup", up);
+    detectPreset(); scheduleSave();
+    setTimeout(() => suppressClick = false, 50);
+  };
+  window.addEventListener("pointermove", move);
+  window.addEventListener("pointerup", up);
+}
+
+function svgCoords(ev) {
+  const svg = $("#curveSvg");
+  const p = svg.createSVGPoint(); p.x = ev.clientX; p.y = ev.clientY;
+  return p.matrixTransform(svg.getScreenCTM().inverse());
+}
+
+function addPoint(ev) {
+  if (dragging || suppressClick) return;
+  const pt = svgCoords(ev);
+  if (pt.x < M.l || pt.x > M.l + PW || pt.y < M.t || pt.y > M.t + PH) return;
+  const t = Math.round(clamp(tFor(pt.x), TMIN, TMAX));
+  const p = Math.round(clamp(pFor(pt.y), 0, 100));
+  if (curve.some(c => Math.abs(c.t - t) < 2)) return;
+  curve.push({ t, p });
+  drawCurve(); detectPreset(); scheduleSave();
+}
+function removePoint(idx) {
+  if (curve.length <= 2) return;
+  curve.splice(idx, 1);
+  drawCurve(); detectPreset(); scheduleSave();
+}
+
+// ---- live status ----
+function sensorKey(chips) {
+  return chips.flatMap(c => (c.temps || []).map(t => c.path + ":" + t.path)).join("|");
+}
+function rebuildSensors(chips) {
+  const sel = $("#sensorSel");
+  const cur = cfg ? cfg.temp_sensor : "";
+  sel.innerHTML = '<option value="">自动（最热传感器）</option>';
+  chips.forEach(c => (c.temps || []).forEach(t => {
+    const o = document.createElement("option");
+    o.value = t.path;
+    o.textContent = (c.name || "?") + " · " + (t.label || ("temp" + t.index));
+    sel.appendChild(o);
+  }));
+  sel.value = cur || "";
+}
+function renderSensors(chips) {
+  const temps = [], fans = [];
+  chips.forEach(c => {
+    (c.temps || []).forEach(t => temps.push({ c, t }));
+    (c.fans || []).forEach(f => fans.push({ c, f }));
+  });
+  const tl = $("#tempList"), fl = $("#fanList");
+  tl.innerHTML = temps.length ? temps.map(({ c, t }) => {
+    const cls = t.ok ? tempClass(t.c) : "";
+    return `<div class="row"><span class="name">${esc(t.label || ("温度 " + t.index))}</span>` +
+      `<span class="val ${cls}">${t.ok ? t.c.toFixed(1) : "—"}<span class="u"> °C</span></span></div>`;
+  }).join("") : '<div class="empty">未检测到温度</div>';
+  fl.innerHTML = fans.length ? fans.map(({ c, f }) =>
+    `<div class="row"><span class="name">${esc(f.label || ("风扇 " + f.index))}</span>` +
+    `<span class="val">${f.ok ? f.rpm : "—"}<span class="u"> rpm</span></span></div>`
+  ).join("") : '<div class="empty">未检测到风扇（驱动可能未加载）</div>';
+}
+function esc(s) { return String(s).replace(/[&<>]/g, m => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[m])); }
+
+async function tick() {
+  try {
+    const s = await getJSON("/api/status");
+    $("#conn").className = "conn ok"; $("#connText").textContent = "已连接";
+    $("#tMode").textContent = s.mode === "manual" ? "手动" : "自动";
+    const tc = $("#tTemp"); tc.className = "v " + tempClass(s.drive_temp_c);
+    tc.innerHTML = (s.drive_temp_c != null ? s.drive_temp_c.toFixed(1) : "—") + '<span class="u">°C</span>';
+    $("#tTarget").innerHTML = pwmToPct(s.target_pwm) + '<span class="u">%</span>';
+
+    const chips = s.chips || [];
+    renderSensors(chips);
+    const key = sensorKey(chips);
+    if (key !== lastSensorKey) { rebuildSensors(chips); lastSensorKey = key; }
+
+    driveTemp = s.drive_temp_c;
+    if (!dragging && mode === "auto") drawCurve();
+  } catch (e) {
+    $("#conn").className = "conn err"; $("#connText").textContent = "连接断开";
+  }
+}
+
+// ---- init + wiring ----
+function applyConfig() {
+  setMode(cfg.mode || "auto", false);
+  const mp = pwmToPct(cfg.manual_pwm ?? 128);
+  $("#manualRange").value = mp; $("#manualVal").textContent = mp + "%";
+  const minp = pwmToPct(cfg.min_pwm ?? 60);
+  $("#minRange").value = minp; $("#minVal").textContent = minp + "%";
+  $("#intRange").value = cfg.interval_sec || 5; $("#intVal").textContent = (cfg.interval_sec || 5) + "s";
+  curve = (cfg.curve && cfg.curve.length ? cfg.curve : [{ temp_c: 35, pwm: 60 }, { temp_c: 75, pwm: 255 }])
+    .map(p => ({ t: p.temp_c, p: pwmToPct(p.pwm) }));
+  drawCurve(); detectPreset();
+}
+
+function wire() {
+  $("#modeAuto").addEventListener("click", () => setMode("auto", true));
+  $("#modeManual").addEventListener("click", () => setMode("manual", true));
+  document.querySelectorAll(".chip").forEach(c => c.addEventListener("click", () => applyPreset(c.dataset.preset)));
+  $("#curveSvg").addEventListener("click", addPoint);
+  $("#manualRange").addEventListener("input", e => { $("#manualVal").textContent = e.target.value + "%"; scheduleSave(); });
+  $("#minRange").addEventListener("input", e => { $("#minVal").textContent = e.target.value + "%"; scheduleSave(); });
+  $("#intRange").addEventListener("input", e => { $("#intVal").textContent = e.target.value + "s"; scheduleSave(); });
+  $("#sensorSel").addEventListener("change", scheduleSave);
+}
+
+(async function init() {
+  wire();
+  try { cfg = await getJSON("/api/config"); }
+  catch (e) { cfg = { mode: "auto", manual_pwm: 128, min_pwm: 60, interval_sec: 5, temp_sensor: "", curve: [] }; }
+  applyConfig();
+  await tick();
+  setInterval(tick, 2000);
+})();
+</script>
+</body>
+</html>

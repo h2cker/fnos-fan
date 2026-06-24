@@ -1,0 +1,31 @@
+# Dev / maintainer compose (builds from source). End users get a generated
+# compose from install.sh that uses the pre-built image instead of `build`.
+# Build prerequisite: run `scripts/vendor-kmod.sh` once to fetch the .ko source.
+services:
+  fnos-fan:
+    build:
+      context: .
+      args:
+        VERSION: dev
+    image: fnos-fan:latest
+    container_name: fnos-fan
+    platform: linux/amd64          # qnap8528 EC is x86-only
+    privileged: true               # required: insmod into host kernel + write /sys
+    restart: unless-stopped
+    stop_grace_period: 30s         # give fanctld time to run its 100% failsafe on stop
+    network_mode: host             # exposes WEB_PORT on the NAS
+    environment:
+      - WEB_PORT=7831
+      - BIND=127.0.0.1             # localhost only; set 0.0.0.0 to expose (no auth!)
+      # - EXTRA_MODULES=it87 nct6775   # opt-in generic Super-IO drivers (non-QNAP)
+    volumes:
+      - /lib/modules:/lib/modules:ro   # kernel modules + build symlink
+      - /usr/src:/usr/src:ro           # kernel headers (runtime module compile)
+      - /sys:/sys                      # hwmon read/write
+      - ./data:/data                   # persisted: config.json + .ko cache
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-m", "3", "http://127.0.0.1:7831/api/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 90s

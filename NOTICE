@@ -1,0 +1,18 @@
+fnos-fan
+========
+
+This repository bundles third-party source code:
+
+  kmod/qnap8528/ — the qnap8528 Linux kernel module
+    Copyright (c) 0xGiddi and contributors
+    Source:  https://github.com/0xGiddi/qnap8528
+    License: GPL-2.0-or-later  (SPDX-License-Identifier: GPL-2.0-or-later)
+    fnOS-specific fork: https://github.com/gzxiexl/qnap8528
+
+    Vendored unmodified for offline / reproducible image builds. All copyright
+    and the GPL-2.0-or-later license terms of the original authors apply to
+    every file under kmod/qnap8528/. See the SPDX headers in the source.
+
+The remaining code in this repository — the fanctld Go daemon (cmd/, internal/),
+the shell scripts (scripts/, install.sh) and the web UI (internal/api/web/) —
+is original work by the repository owner.
