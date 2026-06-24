@@ -18,6 +18,7 @@ services:
       - WEB_PORT=7831
       - BIND=0.0.0.0               # LAN-accessible; 127.0.0.1 = localhost only
       - AUTH_TOKEN=                # set a value to require a web password (Basic auth)
+      # - ALLOWED_HOSTS=nas.example.com  # extra Host names to accept (IP & *.local always OK; needed behind a reverse proxy / Tailscale hostname)
       # - EXTRA_MODULES=it87 nct6775   # opt-in generic Super-IO drivers (non-QNAP)
     volumes:
       - /lib/modules:/lib/modules:ro   # kernel modules + build symlink

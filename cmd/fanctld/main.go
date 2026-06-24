@@ -13,7 +13,9 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
+	"time"
 
 	"github.com/h2cker/fnos-fan/internal/api"
 	"github.com/h2cker/fnos-fan/internal/config"
@@ -29,6 +31,14 @@ func main() {
 	// put auth / a reverse proxy in front — see README).
 	bind := envOr("BIND", "127.0.0.1")
 	token := os.Getenv("AUTH_TOKEN") // optional web password; "" = no auth
+	// Extra Host names to accept besides IPs/localhost/*.local (reverse-proxy or
+	// Tailscale hostnames). IP access — the documented path — never needs this.
+	var allowedHosts []string
+	for _, h := range strings.Split(os.Getenv("ALLOWED_HOSTS"), ",") {
+		if h = strings.TrimSpace(h); h != "" {
+			allowedHosts = append(allowedHosts, h)
+		}
+	}
 
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
@@ -58,7 +68,13 @@ func main() {
 		log.Println("web auth: disabled (set AUTH_TOKEN to require a password)")
 	}
 	addr := net.JoinHostPort(bind, port)
-	srv := &http.Server{Handler: api.New(ctrl, token).Handler()}
+	srv := &http.Server{
+		Handler:           api.New(ctrl, token, allowedHosts).Handler(),
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      15 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
 	if ln, lerr := net.Listen("tcp", addr); lerr != nil {
 		log.Printf("web UI disabled: cannot listen on %s: %v", addr, lerr)
 	} else {

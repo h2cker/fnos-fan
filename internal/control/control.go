@@ -89,12 +89,14 @@ func (c *Controller) Config() config.Config {
 	return *c.cfg
 }
 
-// SetConfig applies and persists a new config.
+// SetConfig applies and persists a new config. Save runs under the lock so a
+// concurrent POST cannot mutate cfg while it is being serialized (data race)
+// or interleave writes to the same temp file; the write is a tiny JSON blob.
 func (c *Controller) SetConfig(n config.Config) error {
 	c.mu.Lock()
+	defer c.mu.Unlock()
 	c.cfg.Apply(n)
 	c.lastPWM = -1 // force re-apply on next tick
-	c.mu.Unlock()
 	return c.cfg.Save()
 }
 

@@ -14,7 +14,7 @@ SSH 进你的 fnOS NAS,执行:
 curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 ```
 
-脚本会自动:检测环境 → 缺内核头文件就自动安装 → 拉取并校验镜像 → 启动 → 等待首次编译加载 → 打印结果。默认网页只监听本机(`127.0.0.1:7831`)。
+脚本会自动:检测环境 → 缺内核头文件就自动安装 → 拉取并校验镜像 → 启动 → 等待首次编译加载 → 打印结果。默认网页**局域网可访问**(`0.0.0.0:7831`,同网段设备直接打开);收紧/加密码见下方「访问与安全」。
 
 ## 前置条件
 
@@ -52,6 +52,10 @@ fnos-fan uninstall   卸载
   之后打开网页会弹登录框(用户名随意,密码即 `AUTH_TOKEN`)。
 - **最严格(仅本机)**:安装时带 `BIND=127.0.0.1`,再用 SSH 隧道:`ssh -L 7831:127.0.0.1:7831 <用户>@<NAS-IP>`。
 - **切勿**在路由器把 `7831` 端口转发到公网;需要外网访问请放到带 HTTPS+认证的反向代理后。
+- 网页已内置防护:**只放行用 IP、`localhost`、`*.local` 访问**,可挡掉 DNS 重绑定 / 跨站(CSRF)——即你在局域网里误开的恶意网页也改不了你的风扇。若你通过**反向代理或 Tailscale 等自定义域名**访问,需用 `ALLOWED_HOSTS` 把该域名列出(逗号分隔),否则返回 403:
+  ```bash
+  curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo ALLOWED_HOSTS=nas.example.com bash
+  ```
 - 端口冲突可改 `WEB_PORT`。容器用 **host 网络**直接绑 NAS 端口;若 fnOS 跑在**非桥接(NAT)虚拟机**里,NAS 的 IP 可能不在局域网直连段,需在虚拟机平台做端口转发或改桥接网卡。
 - 停止务必用 `fnos-fan stop` / `docker stop`(触发“风扇拉满”安全恢复),**不要用 `docker kill`**。
 

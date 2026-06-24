@@ -11,6 +11,7 @@ VERSION="${FNOS_FAN_VERSION:-latest}"
 WEB_PORT="${WEB_PORT:-7831}"
 BIND="${BIND:-0.0.0.0}"              # 0.0.0.0 = 局域网可访问(默认);127.0.0.1 = 仅本机
 AUTH_TOKEN="${AUTH_TOKEN:-}"         # 设置后网页需输此密码(用户名随意);留空 = 无鉴权
+ALLOWED_HOSTS="${ALLOWED_HOSTS:-}"   # 额外允许的 Host 名(IP 与 *.local 始终放行;反代/Tailscale 域名需在此列出,逗号分隔)
 INSTALL_DIR="${FNOS_FAN_DIR:-/opt/fnos-fan}"
 IMAGE="fnos-fan"
 # -----------------------------------------------------------------------------
@@ -115,6 +116,7 @@ services:
       - WEB_PORT=${WEB_PORT}
       - BIND=${BIND}
       - AUTH_TOKEN=${AUTH_TOKEN}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
       # - EXTRA_MODULES=it87 nct6775   # 非 QNAP 主板可尝试通用驱动
     volumes:
       - /lib/modules:/lib/modules:ro

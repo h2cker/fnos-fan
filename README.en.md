@@ -14,7 +14,7 @@ SSH into your fnOS NAS and run:
 curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 ```
 
-The script detects the environment, auto-installs kernel headers if missing, downloads and verifies the image, starts it, waits for the first compile/load, and prints the result. The web UI binds to `127.0.0.1:7831` by default.
+The script detects the environment, auto-installs kernel headers if missing, downloads and verifies the image, starts it, waits for the first compile/load, and prints the result. The web UI is **LAN-accessible** by default (`0.0.0.0:7831`); to lock it down or add a password, see "Access & security" below.
 
 ## Requirements
 
@@ -52,6 +52,10 @@ fnos-fan uninstall   uninstall
   The browser then shows a login prompt (any username; password = `AUTH_TOKEN`).
 - **Strictest (localhost only)**: install with `BIND=127.0.0.1`, then tunnel: `ssh -L 7831:127.0.0.1:7831 <user>@<nas-ip>`.
 - **Never** forward port `7831` to the public internet on your router; for remote access use an authenticated HTTPS reverse proxy.
+- The web UI is hardened: it **only accepts access via IP, `localhost`, or `*.local`**, which blocks DNS-rebinding and cross-site (CSRF) requests — so a malicious page you open on the LAN can't change your fans. If you reach it through a **reverse proxy or a custom hostname (e.g. Tailscale)**, list that hostname via `ALLOWED_HOSTS` (comma-separated) or you'll get a 403:
+  ```bash
+  curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo ALLOWED_HOSTS=nas.example.com bash
+  ```
 - Change `WEB_PORT` on conflict. The container uses **host networking** (binds the NAS port directly); if fnOS runs in a **NAT (non-bridged) VM**, the NAS IP may not be on the LAN directly — set up port forwarding or a bridged adapter in your hypervisor.
 - Always stop with `fnos-fan stop` / `docker stop` (triggers the fans-to-100% failsafe), never `docker kill`.
 
