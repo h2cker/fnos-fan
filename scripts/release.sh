@@ -35,19 +35,19 @@ sha_emit "$TAR"
 echo "$VERSION" > "$DIST/latest.txt"
 cp scripts/install.sh "$DIST/install.sh"
 if [ -n "${PUBLISH_BASE_URL:-}" ]; then
-  sed -i.bak "s#https://YOUR_DOMAIN/fnos-fan#${PUBLISH_BASE_URL}#g" "$DIST/install.sh"
+  sed -i.bak "s#https://vecr.ai/fnos-fan#${PUBLISH_BASE_URL}#g" "$DIST/install.sh"
   rm -f "$DIST/install.sh.bak"
 fi
 
 cat <<EOF
 
 [release] done. Upload the contents of $DIST/ to your web root, e.g.:
-  https://YOUR_DOMAIN/fnos-fan/
+  https://vecr.ai/fnos-fan/
     fnos-fan-$VERSION.tar.gz
     fnos-fan-$VERSION.tar.gz.sha256
     latest.txt
     install.sh        (set PUBLISH_BASE_URL before running to bake your domain in)
 
 End users then install with one command:
-  curl -fsSL https://YOUR_DOMAIN/fnos-fan/install.sh | sudo bash
+  curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 EOF

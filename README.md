@@ -1,124 +1,77 @@
 # fnos-fan
 
-让 **fnOS(飞牛)** 能识别并控制风扇的一体化方案:一个**特权 Docker 容器**,启动时自动检测环境、编译并加载 [qnap8528](https://github.com/0xGiddi/qnap8528) 内核模块(QNAP 的 ITE8528 EC),再通过网页手动 / 自动控制转速。
+> 让飞牛 NAS(fnOS)识别并控制风扇 — 网页手动 / 按温度曲线自动调速
 
-> ⚠️ 内核模块运行在**宿主机内核**里,不在容器内。容器负责:编译 `.ko`、把它 `insmod` 进宿主内核、再读写宿主 `/sys/class/hwmon` 来控风扇。因此容器**必须 `privileged`**,且仅支持 **x86_64**(qnap8528 是 x86 的 EC)。
+**简体中文** · [English](README.en.md)
 
----
+fnOS 默认读不到 QNAP 主板上的风扇和温度(它们挂在 ITE8528 EC 上)。fnos-fan 用一个特权 Docker 容器,自动编译并加载 [qnap8528](https://github.com/0xGiddi/qnap8528) 内核模块把风扇暴露出来,再提供一个网页让你手动或按温度曲线自动控速。
 
-## 给用户:一条命令安装
+## 一键安装
 
-在 **fnOS NAS** 上执行(脚本与镜像都从维护者的域名下载,**不经过 GitHub**):
-
-```bash
-curl -fsSL https://YOUR_DOMAIN/fnos-fan/install.sh | sudo bash
-```
-
-脚本会自动:检测架构 / Docker / fancontrol 冲突 → **缺内核头文件自动 `apt install`** → 下载并校验镜像 → `docker load` → 写 compose → 启动 → 等首次编译(~30-60s)→ 验证风扇 → 打印网址。
-
-- 默认网页**只绑 `127.0.0.1`**(安全)。远程访问用 SSH 隧道:
-  `ssh -L 7831:127.0.0.1:7831 <user>@<nas-ip>`,再开 `http://127.0.0.1:7831`。
-- 想直接在局域网访问:`BIND=0.0.0.0 curl ... | sudo bash`(**无鉴权,自担风险**,建议套带认证的反向代理)。
-- 更新:重新跑安装命令。卸载:`curl -fsSL https://YOUR_DOMAIN/fnos-fan/install.sh | sudo bash -s -- --uninstall`。
-
-### 前置条件
-- x86_64 的 QNAP + fnOS,已装 Docker。
-- 若宿主在跑 `fancontrol`:`sudo systemctl disable --now fancontrol`(否则两边抢风扇)。
-
----
-
-## 给维护者:构建与发布
-
-为什么这样设计(中国网络现实):GitHub、Docker Hub、ghcr.io 在国内都不稳/被墙。所以**你(维护者)预构建好整个镜像**,把镜像与安装脚本放到**你自己的域名**,终端用户全程不碰 GitHub / Docker Hub。
+SSH 进你的 fnOS NAS,执行:
 
 ```bash
-# 1) 一次性把内核模块源码 vendoring 进仓库(需 GitHub,可用镜像)
-scripts/vendor-kmod.sh
-#   国内镜像: KMOD_REPO=https://ghproxy.com/https://github.com/0xGiddi/qnap8528.git scripts/vendor-kmod.sh
-
-# 2) 构建镜像 + 打包 tarball + 校验 + install.sh(把域名写进去)
-PUBLISH_BASE_URL=https://YOUR_DOMAIN/fnos-fan scripts/release.sh
-
-# 3) 把 dist/ 里的文件上传到你的网站根:
-#    fnos-fan-<ver>.tar.gz, .sha256, latest.txt, install.sh
+curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 ```
 
-渠道默认走 **镜像 tarball + `docker load`**(零 registry 运维,国内你的服务器直连最稳)。`install.sh` 顶部 `BASE_URL` 一个变量即可改成自建 registry。
+脚本会自动:检测环境 → 缺内核头文件就自动安装 → 拉取并校验镜像 → 启动 → 等待首次编译加载 → 打印结果。默认网页只监听本机(`127.0.0.1:7831`)。
 
----
+## 前置条件
 
-## 架构
+- **x86_64** 的 QNAP 机型 + fnOS,已安装 Docker。
+- 若系统在跑 `fancontrol`,先停掉避免抢风扇:`sudo systemctl disable --now fancontrol`。
+
+## 使用
+
+浏览器打开网页后:
+
+- **自动**:选预设(静音 / 均衡 / 性能),或直接拖动“温度→转速”曲线;
+- **手动**:一个百分比滑块固定转速;
+- 设置即时生效、自动保存,无需点保存。
+
+远程访问(默认仅本机监听,最安全):
+
+```bash
+ssh -L 7831:127.0.0.1:7831 <用户>@<NAS-IP>
+# 然后本机浏览器打开 http://127.0.0.1:7831
+```
+
+## 管理命令
+
+安装后附带 `fnos-fan` 命令:
 
 ```
-通用镜像(build 一次,linux/amd64) + 运行时检测大脑(每次启动)
-  entrypoint.sh: 架构校验 → 签名/lockdown 检查 → 编译/取缓存 .ko(按内核版本+头文件指纹)
-                 → insmod 进宿主内核 → 扫描 hwmon → 启动 fanctld
-  fanctld (Go) : 手动/自动控制循环 + 失效保护 + Web UI + JSON API
+fnos-fan status      查看状态
+fnos-fan logs        看日志
+fnos-fan restart     重启
+fnos-fan stop        停止(会安全把风扇拉满 100%,勿用 docker kill)
+fnos-fan update      更新到最新版
+fnos-fan uninstall   卸载
 ```
 
-控制守护是**驱动无关**的:只消费 `/sys/class/hwmon` 通用接口,所以 QNAP(qnap8528)和主线内核已支持的通用 EC(it87 / nct6775,设 `EXTRA_MODULES`)都能用。
+## 安全
 
-## 配置与界面
-
-网页:模式(自动曲线 / 手动固定)、预设(静音/均衡/性能)、可拖拽温控曲线、传感器下拉选择、最低转速、采样间隔。**即改即存**,配置持久化在 `data/config.json`。
-
-- 自动:按曲线对决策温度线性插值;不低于 `min_pwm` 地板。
-- 手动:固定转速。
-- 服务端对所有写入做范围/单调/去重校验(防 curl/脚本写入畸形曲线烧硬件)。
-
-## 安全模型(务必了解)
-
-- 这是一个能停风扇的**特权**服务。默认**只绑 localhost**,通过 SSH 隧道访问。
-- `BIND=0.0.0.0` 会暴露到局域网且**无鉴权**——任何设备都能改你的风扇。要暴露请放到带认证的反向代理(Caddy 自动 HTTPS / nginx + Basic Auth)后面。
-- 停止请用 **`docker stop fnos-fan`**(触发"风扇拉满 100%"的安全恢复);**不要 `docker kill`**(SIGKILL 无法在用户态恢复,风扇会停在最后转速)。
+默认只绑 `127.0.0.1`,通过上面的 SSH 隧道访问。若设 `BIND=0.0.0.0` 暴露到局域网,则**接口无鉴权**(任何设备都能改你的风扇),请放到带认证的反向代理后面。停止务必用 `fnos-fan stop` / `docker stop`(会触发“风扇拉满”的安全恢复),**不要用 `docker kill`**。
 
 ## 故障安全
 
-- 退出(SIGTERM)、控制循环 panic、或**全部温度传感器读不到**时:风扇强制拉满 100%。
-- panic 后进程崩溃,容器 `restart: unless-stopped` 自动重启重新接管。
+退出、控制循环异常、或**所有温度传感器都读不到**时,风扇强制拉满 100%;进程崩溃后容器自动重启重新接管,绝不会把风扇卡在低速。
 
 ## 内核升级后
 
-fnOS 升级内核后:① 重启;② `sudo apt install linux-headers-$(uname -r)`;③ `docker restart fnos-fan`。容器会按新内核版本+头文件指纹**自动重新编译** `.ko`(旧缓存自动失效)。
-
-## 排障
-
-```bash
-sudo bash scripts/doctor.sh     # 体检:架构/头文件/签名/lockdown/fancontrol/传感器
-docker logs -f fnos-fan         # 运行日志
-```
+fnOS 升级内核后:① 重启;② `sudo apt install linux-headers-$(uname -r)`;③ `fnos-fan restart`。容器会按新内核版本自动重新编译模块。
 
 ## 已知限制
 
-- **架构**:仅 x86_64;ARM QNAP 的 EC 不是 ITE8528,qnap8528 不适用(仅通用 hwmon 可用)。
-- **Secure Boot / 模块签名 / 内核 lockdown**:会拒绝未签名模块。需关闭 Secure Boot 或 `module.sig_enforce=0`,或用你的 MOK 给模块签名。entrypoint 会检测并给出明确报错。
-- **冷门 EC**:没有 Linux 驱动的芯片不支持(需单独写驱动)。
-- `kmod/qnap8528` 默认取上游 `master`,建议 `KMOD_REF` 钉到具体 tag/commit。
+- 仅 **x86_64**;ARM 的 QNAP 用的不是 ITE8528 EC,不适用(只能走通用 hwmon)。
+- 开启了 Secure Boot / 内核模块签名强制 / lockdown 时,会拒绝未签名模块,需要关闭或自行签名。
+- 没有 Linux 驱动的冷门 EC 芯片不支持。
 
-## 目录结构
+## 致谢与许可
 
-```
-cmd/fanctld/        守护进程入口(扫描→控制→Web,失效保护)
-internal/hwmon/     驱动无关的 hwmon sysfs 扫描/读写
-internal/control/   控制循环(手动/自动 + 滞回 + 失效保护 + 传感器失效保护)
-internal/config/    配置加载/持久化
-internal/api/       JSON API(含服务端校验) + 内嵌 Web UI
-scripts/lib-detect.sh  共享检测(内核/头文件/架构/签名/lockdown/fancontrol)
-scripts/doctor.sh      宿主体检
-scripts/entrypoint.sh  容器运行时大脑
-scripts/install.sh     终端用户一键安装(从你的域名)
-scripts/vendor-kmod.sh 维护者:vendoring 内核模块源码
-scripts/release.sh     维护者:构建镜像 + 打包 tarball
-kmod/qnap8528/         vendored 内核模块源码(由 vendor-kmod.sh 生成)
-Dockerfile             多阶段:Go 交叉编译 amd64 + 运行时(工具链 + 源码)
-docker-compose.yml     开发/构建用(build);终端用户用 install.sh 生成的 image 版
-```
+- 内核模块 **qnap8528** 的版权与 **GPL-2.0-or-later** 许可归原作者 **[0xGiddi](https://github.com/0xGiddi/qnap8528)** 及贡献者所有;本仓库原样 vendoring 用于离线构建,详见 [NOTICE](NOTICE)。
+- 仓库其余代码(Go 守护进程、脚本、Web UI)为本项目原创。
 
-## 致谢与第三方许可
+## 二次开发 / 自建分发
 
-- 内核模块 **qnap8528**(`kmod/qnap8528/`)版权归原作者 **[0xGiddi](https://github.com/0xGiddi/qnap8528)** 及贡献者所有,许可证 **GPL-2.0-or-later**,本仓库原样 vendoring 用于离线构建,未作修改;fnOS 适配 fork:[gzxiexl/qnap8528](https://github.com/gzxiexl/qnap8528)。详见 [NOTICE](NOTICE)。
-- 本仓库其余代码(`fanctld` Go 守护、脚本、Web UI)为本项目原创。
-
-## 后续可选增强(尚未实现)
-
-可观测性(Prometheus `/metrics`、结构化日志)、API 鉴权(Bearer Token)、CSRF 防护、HTTPS/TLS、配置变更审计日志、UI 按 PWM 分组展示。这些不影响核心功能,按需再加。
+想自己构建镜像、用自己的域名分发?见 [RELEASING.md](RELEASING.md)。

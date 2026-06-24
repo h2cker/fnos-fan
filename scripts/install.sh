@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # fnos-fan one-command installer (run on the fnOS NAS):
-#   curl -fsSL https://YOUR_DOMAIN/fnos-fan/install.sh | sudo bash
+#   curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash
 # Re-run to update. Uninstall:
-#   curl -fsSL https://YOUR_DOMAIN/fnos-fan/install.sh | sudo bash -s -- --uninstall
+#   curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo bash -s -- --uninstall
 set -euo pipefail
 
 # ---- config (maintainer edits before hosting, or user overrides via env) ----
-BASE_URL="${FNOS_FAN_BASE_URL:-https://YOUR_DOMAIN/fnos-fan}"
+BASE_URL="${FNOS_FAN_BASE_URL:-https://vecr.ai/fnos-fan}"
 VERSION="${FNOS_FAN_VERSION:-latest}"
 WEB_PORT="${WEB_PORT:-7831}"
 BIND="${BIND:-127.0.0.1}"            # localhost by default (safe). 0.0.0.0 = LAN-exposed.
@@ -32,6 +32,7 @@ uninstall() {
   info "卸载 fnos-fan ..."
   [ -f "$INSTALL_DIR/docker-compose.yml" ] && compose -f "$INSTALL_DIR/docker-compose.yml" down 2>/dev/null || true
   docker rmi "$IMAGE:latest" 2>/dev/null || true
+  rm -f /usr/local/bin/fnos-fan
   warn "配置与编译缓存保留在 $INSTALL_DIR/data(彻底删除请手动 rm -rf $INSTALL_DIR)。"
   ok "已卸载。"
   exit 0
@@ -116,6 +117,28 @@ YAML
 info "启动容器 ..."
 compose -f "$INSTALL_DIR/docker-compose.yml" up -d
 
+# ---- 4b. install the `fnos-fan` management command ----
+cat > /usr/local/bin/fnos-fan <<HELPER
+#!/usr/bin/env bash
+# fnos-fan management helper (installed by install.sh)
+set -euo pipefail
+COMPOSE=$INSTALL_DIR/docker-compose.yml
+PORT=$WEB_PORT
+BASE_URL=$BASE_URL
+dc() { if docker compose version >/dev/null 2>&1; then docker compose "\$@"; else docker-compose "\$@"; fi; }
+case "\${1:-}" in
+  start)     dc -f "\$COMPOSE" up -d ;;
+  stop)      docker stop fnos-fan ;;            # 触发风扇拉满 100% 的安全恢复
+  restart)   docker restart fnos-fan ;;
+  status)    docker ps --filter name=fnos-fan; echo; curl -fsS "http://127.0.0.1:\$PORT/api/status" 2>/dev/null | head -c 400 || echo "(API 未响应)"; echo ;;
+  logs)      docker logs -f fnos-fan ;;
+  update)    curl -fsSL "\$BASE_URL/install.sh" | sudo bash ;;
+  uninstall) curl -fsSL "\$BASE_URL/install.sh" | sudo bash -s -- --uninstall ;;
+  *) echo "用法: fnos-fan {start|stop|restart|status|logs|update|uninstall}"; exit 1 ;;
+esac
+HELPER
+chmod +x /usr/local/bin/fnos-fan
+
 # ---- 5. wait for first compile + sensors ----
 info "等待首次编译并加载驱动(最长 ~90s) ..."
 FANS_OK=0
@@ -137,6 +160,11 @@ if [ "$BIND" = "127.0.0.1" ]; then
 else
   echo "  网页:http://<nas-ip>:${WEB_PORT}  (注意:已暴露到局域网且无鉴权)"
 fi
-echo "  日志:docker logs -f fnos-fan"
-echo "  停止(会安全恢复风扇):docker stop fnos-fan   ← 不要用 docker kill"
-echo "  卸载:curl -fsSL $BASE_URL/install.sh | sudo bash -s -- --uninstall"
+echo
+echo "  管理命令(已安装 fnos-fan):"
+echo "    fnos-fan status     查看状态"
+echo "    fnos-fan logs       看日志"
+echo "    fnos-fan restart    重启"
+echo "    fnos-fan stop       停止(会安全把风扇拉满,勿用 docker kill)"
+echo "    fnos-fan update     更新到最新版"
+echo "    fnos-fan uninstall  卸载"
