@@ -28,6 +28,7 @@ func main() {
 	// reachable unauthenticated on the LAN. Set BIND=0.0.0.0 to expose it (and
 	// put auth / a reverse proxy in front — see README).
 	bind := envOr("BIND", "127.0.0.1")
+	token := os.Getenv("AUTH_TOKEN") // optional web password; "" = no auth
 
 	cfg, err := config.Load(cfgPath)
 	if err != nil {
@@ -51,8 +52,13 @@ func main() {
 	go ctrl.Run(ctx)
 
 	// Web UI is best-effort; a bind failure must not kill fan control.
+	if token != "" {
+		log.Println("web auth: enabled (HTTP Basic)")
+	} else {
+		log.Println("web auth: disabled (set AUTH_TOKEN to require a password)")
+	}
 	addr := net.JoinHostPort(bind, port)
-	srv := &http.Server{Handler: api.New(ctrl).Handler()}
+	srv := &http.Server{Handler: api.New(ctrl, token).Handler()}
 	if ln, lerr := net.Listen("tcp", addr); lerr != nil {
 		log.Printf("web UI disabled: cannot listen on %s: %v", addr, lerr)
 	} else {

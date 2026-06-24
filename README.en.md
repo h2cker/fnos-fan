@@ -23,18 +23,11 @@ The script detects the environment, auto-installs kernel headers if missing, dow
 
 ## Usage
 
-Open the web UI:
+Open `http://<nas-ip>:7831` in a browser on the **same LAN** (the installer prints the exact URL when it finishes), then:
 
 - **Auto**: pick a preset (Quiet / Balanced / Performance), or drag the temperature→fan-speed curve directly.
 - **Manual**: a single percentage slider sets a fixed speed.
 - Changes apply instantly and are saved automatically.
-
-Remote access (localhost-only by default, the safe option):
-
-```bash
-ssh -L 7831:127.0.0.1:7831 <user>@<nas-ip>
-# then open http://127.0.0.1:7831 locally
-```
 
 ## Management
 
@@ -49,9 +42,18 @@ fnos-fan update      update to the latest version
 fnos-fan uninstall   uninstall
 ```
 
-## Security
+## Access & security
 
-Binds `127.0.0.1` by default; reach it over the SSH tunnel above. Setting `BIND=0.0.0.0` exposes it on the LAN with **no authentication** (any device could change your fans) — put it behind an authenticated reverse proxy if you do. Always stop with `fnos-fan stop` / `docker stop` (triggers the fans-to-100% failsafe), never `docker kill`.
+- **LAN-accessible by default** at `http://nas-ip:7831`; the installer opens the ufw/firewalld port automatically.
+- **Add a password** (recommended on untrusted networks): pass `AUTH_TOKEN` at install:
+  ```bash
+  curl -fsSL https://vecr.ai/fnos-fan/install.sh | sudo AUTH_TOKEN=yourpassword bash
+  ```
+  The browser then shows a login prompt (any username; password = `AUTH_TOKEN`).
+- **Strictest (localhost only)**: install with `BIND=127.0.0.1`, then tunnel: `ssh -L 7831:127.0.0.1:7831 <user>@<nas-ip>`.
+- **Never** forward port `7831` to the public internet on your router; for remote access use an authenticated HTTPS reverse proxy.
+- Change `WEB_PORT` on conflict. The container uses **host networking** (binds the NAS port directly); if fnOS runs in a **NAT (non-bridged) VM**, the NAS IP may not be on the LAN directly — set up port forwarding or a bridged adapter in your hypervisor.
+- Always stop with `fnos-fan stop` / `docker stop` (triggers the fans-to-100% failsafe), never `docker kill`.
 
 ## Failsafe
 

@@ -9,7 +9,8 @@ set -euo pipefail
 BASE_URL="${FNOS_FAN_BASE_URL:-https://vecr.ai/fnos-fan}"
 VERSION="${FNOS_FAN_VERSION:-latest}"
 WEB_PORT="${WEB_PORT:-7831}"
-BIND="${BIND:-127.0.0.1}"            # localhost by default (safe). 0.0.0.0 = LAN-exposed.
+BIND="${BIND:-0.0.0.0}"              # 0.0.0.0 = 局域网可访问(默认);127.0.0.1 = 仅本机
+AUTH_TOKEN="${AUTH_TOKEN:-}"         # 设置后网页需输此密码(用户名随意);留空 = 无鉴权
 INSTALL_DIR="${FNOS_FAN_DIR:-/opt/fnos-fan}"
 IMAGE="fnos-fan"
 # -----------------------------------------------------------------------------
@@ -19,6 +20,19 @@ info() { cecho "0;36" "[*] $*"; }
 ok()   { cecho "0;32" "[+] $*"; }
 warn() { cecho "1;33" "[!] $*"; }
 die()  { cecho "1;31" "[x] $*"; exit 1; }
+
+# 探测局域网 IPv4 地址
+lan_ips() { ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1; }
+
+# 若有活动防火墙则放行端口(ufw / firewalld)
+open_firewall() {
+  local p="$1"
+  if command -v ufw >/dev/null && ufw status 2>/dev/null | grep -qi "Status: active"; then
+    ufw allow "$p"/tcp >/dev/null 2>&1 && ok "ufw 已放行 $p/tcp"
+  elif command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+    firewall-cmd --permanent --add-port="$p"/tcp >/dev/null 2>&1 && firewall-cmd --reload >/dev/null 2>&1 && ok "firewalld 已放行 $p/tcp"
+  fi
+}
 
 [ "$(id -u)" = 0 ] || die "请用 root 运行(sudo)。"
 
@@ -100,6 +114,7 @@ services:
     environment:
       - WEB_PORT=${WEB_PORT}
       - BIND=${BIND}
+      - AUTH_TOKEN=${AUTH_TOKEN}
       # - EXTRA_MODULES=it87 nct6775   # 非 QNAP 主板可尝试通用驱动
     volumes:
       - /lib/modules:/lib/modules:ro
@@ -116,6 +131,9 @@ YAML
 
 info "启动容器 ..."
 compose -f "$INSTALL_DIR/docker-compose.yml" up -d
+
+# 局域网访问时放行防火墙端口
+[ "$BIND" != "127.0.0.1" ] && open_firewall "$WEB_PORT"
 
 # ---- 4b. install the `fnos-fan` management command ----
 cat > /usr/local/bin/fnos-fan <<HELPER
@@ -156,9 +174,18 @@ else
 fi
 if [ "$BIND" = "127.0.0.1" ]; then
   echo "  网页(仅本机):http://127.0.0.1:${WEB_PORT}"
-  echo "  远程访问请用 SSH 隧道: ssh -L ${WEB_PORT}:127.0.0.1:${WEB_PORT} <user>@<nas-ip>"
+  echo "  远程访问请用 SSH 隧道: ssh -L ${WEB_PORT}:127.0.0.1:${WEB_PORT} <用户>@<NAS-IP>"
 else
-  echo "  网页:http://<nas-ip>:${WEB_PORT}  (注意:已暴露到局域网且无鉴权)"
+  echo "  网页(局域网,同网段电脑/手机浏览器打开):"
+  IPS="$(lan_ips)"
+  if [ -n "$IPS" ]; then for ip in $IPS; do echo "    http://${ip}:${WEB_PORT}"; done
+  else echo "    http://<NAS-IP>:${WEB_PORT}"; fi
+  if [ -n "$AUTH_TOKEN" ]; then
+    echo "  访问需输密码(用户名随意,密码 = 你设的 AUTH_TOKEN)。"
+  else
+    echo "  注意:无鉴权,同网段任何设备都能改风扇;切勿在路由器把 ${WEB_PORT} 端口转发到公网。"
+    echo "  想加密码:用 AUTH_TOKEN=你的密码 重新安装(详见 README)。"
+  fi
 fi
 echo
 echo "  管理命令(已安装 fnos-fan):"

@@ -2,6 +2,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"embed"
 	"encoding/json"
 	"errors"
@@ -19,12 +20,15 @@ var webFS embed.FS
 
 // Server wires HTTP handlers to the controller.
 type Server struct {
-	ctrl *control.Controller
+	ctrl  *control.Controller
+	token string // optional HTTP Basic password; "" disables auth
 }
 
-func New(ctrl *control.Controller) *Server { return &Server{ctrl: ctrl} }
+func New(ctrl *control.Controller, token string) *Server {
+	return &Server{ctrl: ctrl, token: token}
+}
 
-// Handler returns the configured HTTP mux.
+// Handler returns the configured HTTP mux, wrapped in Basic auth if a token is set.
 func (s *Server) Handler() http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/api/status", s.handleStatus)
@@ -32,7 +36,26 @@ func (s *Server) Handler() http.Handler {
 
 	sub, _ := fs.Sub(webFS, "web")
 	mux.Handle("/", http.FileServer(http.FS(sub)))
-	return mux
+
+	if s.token == "" {
+		return mux
+	}
+	return s.requireAuth(mux)
+}
+
+// requireAuth enforces HTTP Basic auth (any username, password == token) when
+// AUTH_TOKEN is set. Browsers show a native login prompt and then carry the
+// cached credentials on the UI's fetch() calls automatically.
+func (s *Server) requireAuth(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_, pass, ok := r.BasicAuth()
+		if !ok || subtle.ConstantTimeCompare([]byte(pass), []byte(s.token)) != 1 {
+			w.Header().Set("WWW-Authenticate", `Basic realm="fnos-fan", charset="UTF-8"`)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
