@@ -159,13 +159,35 @@ esac
 HELPER
 chmod +x /usr/local/bin/fnos-fan
 
-# ---- 5. wait for first compile + sensors ----
-info "等待首次编译并加载驱动(最长 ~90s) ..."
-FANS_OK=0
-for _ in $(seq 1 45); do
+# ---- 5. wait for first compile + sensors (with live progress) ----
+WAIT_MAX=90   # 秒;首次要在容器里编译内核模块,较慢
+info "等待首次编译并加载驱动(最长 ~${WAIT_MAX}s)..."
+FANS_OK=0; elapsed=0; BAR_W=28
+
+draw_progress() { # $1=百分比 $2=右侧说明;TTY 下原地重绘进度条,否则逐行打印
+  local pct="$1" msg="$2" fill='' emp='' nf ne
+  nf=$(( pct * BAR_W / 100 )); ne=$(( BAR_W - nf ))
+  if [ "$nf" -gt 0 ]; then printf -v fill '%*s' "$nf" ''; fill=${fill// /█}; fi
+  if [ "$ne" -gt 0 ]; then printf -v emp  '%*s' "$ne" ''; emp=${emp// /░}; fi
+  if [ -t 1 ]; then printf '\r  [%s%s] %3d%%  %s\033[K' "$fill" "$emp" "$pct" "$msg"
+  else            printf '  ...%3ds  %s\n' "$elapsed" "$msg"; fi
+}
+current_phase() { # 从容器日志(英文)推断阶段,转成中文提示
+  case "$(docker logs --tail 6 fnos-fan 2>&1)" in
+    *"starting fanctld"*) echo "启动控制服务" ;;
+    *loading*|*insmod*)   echo "加载内核模块" ;;
+    *building*)           echo "编译内核模块(首次较慢)" ;;
+    *)                    echo "准备容器" ;;
+  esac
+}
+
+while [ "$elapsed" -lt "$WAIT_MAX" ]; do
   if curl -fsS "http://127.0.0.1:${WEB_PORT}/api/status" 2>/dev/null | grep -q '"rpm"'; then FANS_OK=1; break; fi
-  sleep 2
+  draw_progress "$(( elapsed * 100 / WAIT_MAX ))" "$(current_phase) · ${elapsed}s"
+  sleep 2; elapsed=$(( elapsed + 2 ))
 done
+if [ "$FANS_OK" = 1 ]; then draw_progress 100 "完成"; else draw_progress 100 "未读到风扇"; fi
+if [ -t 1 ]; then printf '\n'; fi
 
 echo
 if [ "$FANS_OK" = 1 ]; then
