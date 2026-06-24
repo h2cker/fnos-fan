@@ -84,26 +84,32 @@ else
   ok "内核头文件已就绪。"
 fi
 
-# ---- 3. resolve version + download image ----
+# ---- 3. resolve version + load image (skip download if already present) ----
 if [ "$VERSION" = "latest" ]; then
   RV="$(curl -fsSL "$BASE_URL/latest.txt" 2>/dev/null | tr -d '[:space:]' || true)"
   [ -n "$RV" ] && VERSION="$RV" || die "无法解析最新版本($BASE_URL/latest.txt)。"
 fi
-TAR="fnos-fan-$VERSION.tar.gz"
-TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
 
-info "下载镜像 $TAR ..."
-curl -fSL --progress-bar "$BASE_URL/$TAR" -o "$TMP/$TAR" || die "镜像下载失败:$BASE_URL/$TAR"
-if curl -fsSL "$BASE_URL/$TAR.sha256" -o "$TMP/$TAR.sha256" 2>/dev/null; then
-  info "校验 SHA256 ..."
-  ( cd "$TMP" && { sha256sum -c "$TAR.sha256" >/dev/null 2>&1 || shasum -a 256 -c "$TAR.sha256" >/dev/null 2>&1; } ) \
-    || die "校验失败,文件可能损坏或被篡改。"
-  ok "校验通过。"
+if docker image inspect "$IMAGE:$VERSION" >/dev/null 2>&1; then
+  ok "已是最新版本 $VERSION,镜像本地已存在 —— 跳过下载。"
 else
-  warn "未找到校验文件,跳过校验。"
+  TAR="fnos-fan-$VERSION.tar.gz"
+  TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+  info "下载镜像 $TAR ..."
+  curl -fSL --progress-bar "$BASE_URL/$TAR" -o "$TMP/$TAR" || die "镜像下载失败:$BASE_URL/$TAR"
+  if curl -fsSL "$BASE_URL/$TAR.sha256" -o "$TMP/$TAR.sha256" 2>/dev/null; then
+    info "校验 SHA256 ..."
+    ( cd "$TMP" && { sha256sum -c "$TAR.sha256" >/dev/null 2>&1 || shasum -a 256 -c "$TAR.sha256" >/dev/null 2>&1; } ) \
+      || die "校验失败,文件可能损坏或被篡改。"
+    ok "校验通过。"
+  else
+    warn "未找到校验文件,跳过校验。"
+  fi
+  info "加载镜像到 Docker ..."
+  gunzip -c "$TMP/$TAR" | docker load
 fi
-info "加载镜像到 Docker ..."
-gunzip -c "$TMP/$TAR" | docker load
+# compose 用 image: fnos-fan:latest —— 确保 latest 指向本次解析到的版本
+docker tag "$IMAGE:$VERSION" "$IMAGE:latest" 2>/dev/null || true
 
 # ---- 4. write compose + start ----
 mkdir -p "$INSTALL_DIR/data"
